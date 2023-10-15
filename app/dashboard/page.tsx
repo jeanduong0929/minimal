@@ -4,6 +4,7 @@ import Loader from "@/components/loader";
 import Navbar from "@/components/navbar/navbar";
 import Auth from "@/models/auth";
 import { useSession } from "next-auth/react";
+import SideBar from "@/components/sidebar";
 
 const DashboardPage = () => {
   // Session
@@ -21,7 +22,9 @@ const DashboardPage = () => {
   return (
     <>
       <Navbar />
-      <div className="max-w-screen-lg w-11/12 mx-auto">DashboardPage</div>
+      <div className="flex max-w-screen-lg w-11/12 mx-auto py-5">
+        <SideBar />
+      </div>
     </>
   );
 };

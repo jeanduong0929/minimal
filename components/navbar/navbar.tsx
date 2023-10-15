@@ -54,13 +54,18 @@ interface UserDropdownProps {
 }
 
 const UserDropdown: React.FC<UserDropdownProps> = ({ session }) => {
+  const getInitial = (): string => {
+    const email = session?.user?.email as string;
+    return (email[0] + email[1]).toUpperCase();
+  };
+
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger>
           <Avatar>
             <AvatarImage src={session?.user?.image as string} />
-            <AvatarFallback>CN</AvatarFallback>
+            <AvatarFallback>{getInitial()}</AvatarFallback>
           </Avatar>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
