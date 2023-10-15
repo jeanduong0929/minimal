@@ -8,7 +8,9 @@ const ProfilePage = () => {
       <Navbar />
       <div className="flex max-w-screen-lg mx-auto w-11/12 py-5">
         <SideBar />
-        <h1>Profile</h1>
+        <div className="pl-14">
+          <h1>Profile</h1>
+        </div>
       </div>
     </>
   );
