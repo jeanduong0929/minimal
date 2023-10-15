@@ -81,12 +81,13 @@ const DashboardPage = () => {
             <NewNoteDialog
               open={newNoteDialogOpen}
               setOpen={setNewNoteDialogOpen}
+              auth={auth}
             />
           </div>
 
           {/* Notes */}
           {notes.map((note) => (
-            <NoteItem note={note} />
+            <NoteItem note={note} auth={auth} />
           ))}
         </div>
       </div>
@@ -96,9 +97,10 @@ const DashboardPage = () => {
 
 interface NoteItemProps {
   note: Note;
+  auth: Auth | null;
 }
 
-const NoteItem: React.FC<NoteItemProps> = ({ note }) => {
+const NoteItem: React.FC<NoteItemProps> = ({ note, auth }) => {
   return (
     <>
       <div
@@ -106,13 +108,17 @@ const NoteItem: React.FC<NoteItemProps> = ({ note }) => {
         className="flex items-center justify-between border w-full px-10 py-5"
       >
         <h3 className="font-bold text-lg">{note.title}</h3>
-        <NoteDropdown />
+        <NoteDropdown auth={auth} />
       </div>
     </>
   );
 };
 
-const NoteDropdown = () => {
+interface NoteDropdownProps {
+  auth: Auth | null;
+}
+
+const NoteDropdown: React.FC<NoteDropdownProps> = ({ auth }) => {
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -134,7 +140,7 @@ const NoteDropdown = () => {
       </DropdownMenu>
 
       {/* Delete note dialog */}
-      <DeleteNoteDialog open={open} setOpen={setOpen} />
+      <DeleteNoteDialog open={open} setOpen={setOpen} auth={auth} />
     </>
   );
 };
@@ -188,8 +194,14 @@ const NewNoteDialog: React.FC<DeleteNoteDialogProps> = ({
   // Loading state
   const [loading, setLoading] = React.useState<boolean>(false);
 
-  const handleTitle = () => {
+  const handleTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(title);
+
+    if (!e.target.value.trim()) {
+      setError("Title cannot be empty.");
+    } else {
+      setError("");
+    }
   };
 
   const handleNewNoteForm = async () => {
@@ -224,6 +236,7 @@ const NewNoteDialog: React.FC<DeleteNoteDialogProps> = ({
               type={"text"}
               value={title}
               onChange={handleTitle}
+              error={error}
             />
           </div>
           <DialogFooter>
