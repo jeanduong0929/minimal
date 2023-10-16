@@ -79,7 +79,8 @@ const DashboardPage = () => {
           <div className="flex items-center justify-between w-full mb-10">
             <h1 className="font-bold text-4xl">Notes</h1>
             <Button onClick={() => setNewNoteDialogOpen(true)}>
-              <PlusIcon className="h-4 w-4 mr-4" /> New note
+              <PlusIcon className="h-4 w-4 mr-4" />
+              New note
             </Button>
 
             {/* New note dialog */}
@@ -205,7 +206,9 @@ const NoteDropdown: React.FC<NoteDropdownProps> = ({
         <DropdownMenuContent align="end">
           <DropdownMenuItem>Edit</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => markDone()}>Done</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => markDone()}>
+            {note.completed ? "Undone" : "Done"}
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-red-600"
@@ -217,7 +220,13 @@ const NoteDropdown: React.FC<NoteDropdownProps> = ({
       </DropdownMenu>
 
       {/* Delete note dialog */}
-      <DeleteNoteDialog open={open} setOpen={setOpen} auth={auth} note={note} />
+      <DeleteNoteDialog
+        open={open}
+        setOpen={setOpen}
+        auth={auth}
+        note={note}
+        setNotes={setNotes}
+      />
     </>
   );
 };
@@ -227,6 +236,7 @@ interface DeleteNoteDialogProps {
   note: Note;
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
 }
 
 const DeleteNoteDialog: React.FC<DeleteNoteDialogProps> = ({
@@ -234,9 +244,13 @@ const DeleteNoteDialog: React.FC<DeleteNoteDialogProps> = ({
   note,
   open,
   setOpen,
+  setNotes,
 }) => {
   // Loading state
   const [loading, setLoading] = React.useState<boolean>(false);
+
+  // Custom hooks
+  const { toast } = useToast();
 
   const handleDeleteNote = async () => {
     setLoading(true);
@@ -246,8 +260,18 @@ const DeleteNoteDialog: React.FC<DeleteNoteDialogProps> = ({
           token: auth!.jwt as string,
         },
       });
+
+      toast({
+        title: "Note deleted successfully.",
+        className: "bg-green-500 text-white",
+      });
+
+      setNotes((prev) => prev.filter((n) => n._id !== note._id));
     } catch (error: any) {
       console.error(error);
+      if (error.response && error.response.status === 401) {
+        signOut();
+      }
     } finally {
       setLoading(false);
     }
@@ -262,13 +286,12 @@ const DeleteNoteDialog: React.FC<DeleteNoteDialogProps> = ({
             <DialogDescription>This action cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant={"secondary"} onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
             <Button
               className="bg-red-600 text-white"
-              onClick={handleDeleteNote}
+              type="button"
+              variant={"destructive"}
               disabled={loading}
+              onClick={() => handleDeleteNote()}
             >
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Delete
@@ -357,25 +380,30 @@ const NewNoteDialog: React.FC<NewNoteDialogProps> = ({
     <>
       <Dialog open={open} onOpenChange={() => setOpen(!open)}>
         <DialogContent>
-          <DialogHeader></DialogHeader>
-          <div className="w-full py-5">
-            <FormInput
-              placeholder={"Example note"}
-              type={"text"}
-              value={title}
-              onChange={handleTitle}
-              error={error}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant={"secondary"} onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button disabled={loading} onClick={handleNewNoteForm}>
-              {loading && <Loader2 className="w-4 h-4 mr-2" />}
-              Submit
-            </Button>
-          </DialogFooter>
+          <form onSubmit={handleNewNoteForm}>
+            <div className="w-full py-5">
+              <FormInput
+                placeholder={"Example note"}
+                type={"text"}
+                value={title}
+                onChange={handleTitle}
+                error={error}
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant={"secondary"}
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading && <Loader2 className="w-4 h-4 mr-2" />}
+                Submit
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </>
