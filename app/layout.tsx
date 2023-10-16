@@ -21,20 +21,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <Session>
-            <div className="flex flex-col min-h-screen">
-              <main className="flex-grow">{children}</main>
-              <Footer />
-              <Toaster />
-            </div>
-          </Session>
-        </ThemeProvider>
+        <Session>
+          <div className="flex flex-col min-h-screen">
+            <main className="flex-grow">{children}</main>
+            <Footer />
+            <Toaster />
+          </div>
+        </Session>
       </body>
     </html>
   );
