@@ -3,7 +3,6 @@ import React from "react";
 import Loader from "@/components/loader";
 import Navbar from "@/components/navbar/navbar";
 import Auth from "@/models/auth";
-import SideBar from "@/components/sidebar";
 import Note from "@/models/note";
 import FormInput from "@/components/form/form-input";
 import EllipsisVerticalIcon from "@/components/svgs/ellipsis-vertical-icon";
@@ -33,6 +32,7 @@ const DashboardPage = () => {
   const [newNoteDialogOpen, setNewNoteDialogOpen] =
     React.useState<boolean>(false);
   const [notes, setNotes] = React.useState<Note[]>([]);
+  const [editDialogOpen, setEditDialogOpen] = React.useState<boolean>(false);
 
   // Session
   const { data: session, status } = useSession();
@@ -42,7 +42,7 @@ const DashboardPage = () => {
     if (auth) {
       getNotes();
     }
-  }, [auth, newNoteDialogOpen]);
+  }, [auth, newNoteDialogOpen, editDialogOpen]);
 
   const getNotes = async () => {
     try {
@@ -73,8 +73,7 @@ const DashboardPage = () => {
     <>
       <Navbar />
       <div className="flex max-w-screen-lg w-11/12 mx-auto py-5">
-        <SideBar />
-        <div className="flex flex-col items-start pl-14 w-full">
+        <div className="flex flex-col items-start w-full">
           {/* Header */}
           <div className="flex items-center justify-between w-full mb-10">
             <h1 className="font-bold text-4xl">Notes</h1>
@@ -98,6 +97,8 @@ const DashboardPage = () => {
               note={note}
               auth={auth}
               setNotes={setNotes}
+              editDialogOpen={editDialogOpen}
+              setEditDialogOpen={setEditDialogOpen}
             />
           ))}
         </div>
@@ -110,9 +111,17 @@ interface NoteItemProps {
   note: Note;
   auth: Auth | null;
   setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
+  editDialogOpen: boolean;
+  setEditDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const NoteItem: React.FC<NoteItemProps> = ({ note, auth, setNotes }) => {
+const NoteItem: React.FC<NoteItemProps> = ({
+  note,
+  auth,
+  setNotes,
+  editDialogOpen,
+  setEditDialogOpen,
+}) => {
   const [markDoneLoading, setMarkDoneLoading] = React.useState<boolean>(false);
 
   return (
@@ -132,6 +141,8 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, auth, setNotes }) => {
           note={note}
           setMarkDoneLoading={setMarkDoneLoading}
           setNotes={setNotes}
+          editDialogOpen={editDialogOpen}
+          setEditDialogOpen={setEditDialogOpen}
         />
       </div>
     </>
@@ -143,6 +154,8 @@ interface NoteDropdownProps {
   note: Note;
   setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
   setMarkDoneLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  editDialogOpen: boolean;
+  setEditDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const NoteDropdown: React.FC<NoteDropdownProps> = ({
@@ -150,6 +163,8 @@ const NoteDropdown: React.FC<NoteDropdownProps> = ({
   note,
   setNotes,
   setMarkDoneLoading,
+  editDialogOpen,
+  setEditDialogOpen,
 }) => {
   // Variable states
   const [open, setOpen] = React.useState(false);
@@ -204,7 +219,9 @@ const NoteDropdown: React.FC<NoteDropdownProps> = ({
           <EllipsisVerticalIcon className="w-4 h-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem>Edit</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setEditDialogOpen(true)}>
+            Edit
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => markDone()}>
             {note.completed ? "Undone" : "Done"}
@@ -226,6 +243,14 @@ const NoteDropdown: React.FC<NoteDropdownProps> = ({
         auth={auth}
         note={note}
         setNotes={setNotes}
+      />
+
+      {/* Edit note dialog */}
+      <EditNoteDialog
+        auth={auth}
+        open={editDialogOpen}
+        setOpen={setEditDialogOpen}
+        note={note}
       />
     </>
   );
@@ -383,6 +408,109 @@ const NewNoteDialog: React.FC<NewNoteDialogProps> = ({
       <Dialog open={open} onOpenChange={() => setOpen(!open)}>
         <DialogContent>
           <form onSubmit={handleNewNoteForm}>
+            <div className="w-full pb-5 pt-10">
+              <FormInput
+                placeholder={"Example note"}
+                type={"text"}
+                value={title}
+                onChange={handleTitle}
+                error={error}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={loading}>
+                {loading && <Loader2 className="w-4 h-4 mr-2" />}
+                Submit
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
+interface EditNoteDialogProps {
+  auth: Auth | null;
+  open: boolean;
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  note: Note;
+}
+
+const EditNoteDialog: React.FC<EditNoteDialogProps> = ({
+  auth,
+  open,
+  setOpen,
+  note,
+}) => {
+  // Form states
+  const [title, setTitle] = React.useState<string>(note.title);
+
+  // Error state
+  const [error, setError] = React.useState<string>("");
+
+  // Loading state
+  const [loading, setLoading] = React.useState<boolean>(false);
+
+  // Custom hooks
+  const { toast } = useToast();
+
+  const handleTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(e.target.value);
+
+    if (!e.target.value.trim()) {
+      setError("Title cannot be empty.");
+    } else {
+      setError("");
+    }
+  };
+
+  const handleEditNoteForm = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    setLoading(true);
+    try {
+      await instance.patch(
+        "/note",
+        {
+          _id: note._id,
+          title: title,
+        },
+        {
+          headers: {
+            token: auth!.jwt as string,
+          },
+        },
+      );
+
+      toast({
+        title: "Note edited successfully.",
+        className: "bg-green-500 text-white",
+      });
+
+      setOpen(false);
+    } catch (error: any) {
+      console.error(error);
+      if (error.response && error.response.status === 400) {
+        setError("Title cannot be empty.");
+      }
+
+      if (error.response && error.response.status === 401) {
+        signOut();
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={() => setOpen(!open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Note</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditNoteForm}>
             <div className="w-full py-5">
               <FormInput
                 placeholder={"Example note"}
@@ -393,13 +521,6 @@ const NewNoteDialog: React.FC<NewNoteDialogProps> = ({
               />
             </div>
             <DialogFooter>
-              <Button
-                type="button"
-                variant={"secondary"}
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
               <Button type="submit" disabled={loading}>
                 {loading && <Loader2 className="w-4 h-4 mr-2" />}
                 Submit

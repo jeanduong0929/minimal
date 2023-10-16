@@ -57,3 +57,25 @@ export const POST = async (req: NextRequest) => {
     return NextResponse.json({}, { status: 500 });
   }
 };
+
+export const PATCH = async (req: NextRequest) => {
+  try {
+    const { _id, title } = await req.json();
+    const token = req.headers.get("token");
+
+    if (!_id || !token || !title) {
+      return NextResponse.json({}, { status: 400 });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as Auth;
+    if (!decoded) {
+      return NextResponse.json({}, { status: 401 });
+    }
+
+    await connectDB();
+    await NoteEntity.findByIdAndUpdate<NoteDocument>({ _id }, { title });
+    return NextResponse.json({}, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({}, { status: 500 });
+  }
+};
