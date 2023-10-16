@@ -1,5 +1,5 @@
 {
-  "name": "todo",
+  "name": "Minimal",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -14,8 +14,10 @@
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-toast": "^1.1.5",
+    "@types/bcrypt": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.3",
     "axios": "^1.5.1",
+    "bcrypt": "^5.1.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "jsonwebtoken": "^9.0.2",

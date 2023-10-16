@@ -7,7 +7,7 @@ import NextAuthButtons from "@/components/form/next-auth-buttons";
 import { ChevronLeft, CommandIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import instance from "@/lib/axios-config";
+import { signIn } from "next-auth/react";
 
 const LoginPage = () => {
   return (
@@ -66,16 +66,20 @@ const LoginForm = () => {
     e.preventDefault();
     setSubmitLoading(true);
     try {
-      await instance.post("/auth/login", {
+      const data = await signIn("credentials", {
+        redirect: false,
         email,
         password,
       });
+
+      console.log("Data: ", data);
+      if (data && data.status === 401) {
+        setEmailError("Invalid email or password");
+      }
+
       router.push("/dashboard");
     } catch (error: any) {
       console.error(error);
-      if (error.response && error.response.status === 401) {
-        setPasswordError("Invalid email or password");
-      }
     } finally {
       setSubmitLoading(false);
     }
@@ -93,6 +97,7 @@ const LoginForm = () => {
           type={"email"}
           value={email}
           onChange={handleEmail}
+          error={emailError}
         />
 
         {/* Password */}

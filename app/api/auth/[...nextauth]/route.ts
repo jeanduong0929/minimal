@@ -1,11 +1,13 @@
-import connectDB from "@/lib/db";
-import AccountEntity, { AccountDocument } from "@/entities/account-entity";
-import UserEntity, { UserDocument } from "@/entities/user-entity";
-import GithubProvider from "next-auth/providers/github";
 import jwt from "jsonwebtoken";
-import { JWT } from "next-auth/jwt";
-import NextAuth, { Account, Profile, Session, User } from "next-auth";
+import connectDB from "@/lib/db";
+import instance from "@/lib/axios-config";
 import Auth from "@/models/auth";
+import GithubProvider from "next-auth/providers/github";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { JWT } from "next-auth/jwt";
+import UserEntity, { UserDocument } from "@/entities/user-entity";
+import AccountEntity, { AccountDocument } from "@/entities/account-entity";
+import NextAuth, { Account, Profile, Session, User } from "next-auth";
 
 interface GithubProfile extends Profile {
   id: string;
@@ -16,6 +18,28 @@ const handler = NextAuth({
     GithubProvider({
       clientId: process.env.GITHUB_CLIENT_ID as string,
       clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+    }),
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {},
+      async authorize(credentials) {
+        try {
+          const { email, password } = credentials as {
+            email: string;
+            password: string;
+          };
+
+          const { data } = await instance.post("/auth/login", {
+            email,
+            password,
+          });
+
+          return data;
+        } catch (error: any) {
+          console.error("Error when logging in: ", error.message);
+          return null;
+        }
+      },
     }),
   ],
   callbacks: {
@@ -28,58 +52,53 @@ const handler = NextAuth({
       account: Account | null;
       profile?: Profile | null;
     }): Promise<boolean> {
-      if (account && profile) {
-        let providerId,
-          providerType = "";
+      console.log(account, profile);
+      let providerId = "";
+      let providerType = "";
 
-        if (account.provider === "github") {
-          const githubProfile = profile as GithubProfile;
-          providerId = githubProfile.id;
-          providerType = "github";
-        } else {
-          providerId = account.id;
-          providerType = "credentials";
-        }
+      if (account && account.provider === "github") {
+        const githubProfile = profile as GithubProfile;
+        providerId = githubProfile.id;
+        providerType = "github";
+      }
 
-        // Connect to db
-        await connectDB();
+      // Connect to db
+      await connectDB();
 
-        // Find account
-        const existingAccount = await AccountEntity.findOne<AccountDocument>({
-          providerId,
-        });
-        if (existingAccount) {
-          return true;
-        }
-
-        // Find user
-        const existingUser = await UserEntity.findOne<UserDocument>({
-          email: user?.email,
-        });
-        if (existingUser) {
-          // Create account
-          await AccountEntity.create<AccountDocument>({
-            providerId,
-            providerType,
-            user: existingUser._id,
-          });
-          return true;
-        }
-
-        // Create user and account
-        const newUser = await UserEntity.create<UserDocument>({
-          email: user?.email,
-        });
-        await AccountEntity.create<AccountDocument>({
-          providerId,
-          providerType,
-          user: newUser._id,
-        });
-
-        // Return true to accept sign in
+      // Find account
+      const existingAccount = await AccountEntity.findOne<AccountDocument>({
+        providerId,
+      });
+      if (existingAccount) {
         return true;
       }
-      return false;
+
+      // Find user
+      const existingUser = await UserEntity.findOne<UserDocument>({
+        email: user?.email,
+      });
+      if (existingUser) {
+        // Create account
+        await AccountEntity.create<AccountDocument>({
+          providerId: providerId || existingUser._id,
+          providerType: providerType || "credentials",
+          user: existingUser._id,
+        });
+        return true;
+      }
+
+      // Create user and account
+      const newUser = await UserEntity.create<UserDocument>({
+        email: user?.email,
+      });
+      await AccountEntity.create<AccountDocument>({
+        providerId,
+        providerType,
+        user: newUser._id,
+      });
+
+      // Return true to accept sign in
+      return true;
     },
     async jwt({
       token,

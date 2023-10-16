@@ -6,6 +6,7 @@ interface FormInputProps {
   type: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   error?: string;
 }
 
@@ -14,6 +15,7 @@ const FormInput: React.FC<FormInputProps> = ({
   type,
   value,
   onChange,
+  onBlur,
   error,
 }) => {
   return (
@@ -24,6 +26,7 @@ const FormInput: React.FC<FormInputProps> = ({
           type={type}
           value={value}
           onChange={onChange}
+          onBlur={onBlur}
         />
         {error && <p className="pl-2 text-red-500 text-sm">{error}</p>}
       </div>
