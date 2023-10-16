@@ -5,8 +5,13 @@ import Navbar from "@/components/navbar/navbar";
 import Auth from "@/models/auth";
 import SideBar from "@/components/sidebar";
 import Note from "@/models/note";
+import FormInput from "@/components/form/form-input";
 import EllipsisVerticalIcon from "@/components/svgs/ellipsis-vertical-icon";
-import { useSession } from "next-auth/react";
+import instance from "@/lib/axios-config";
+import { Button } from "@/components/ui/button";
+import { Loader2, PlusIcon } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
+import { useToast } from "@/components/ui/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,39 +27,39 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Loader2, PlusIcon } from "lucide-react";
-import FormInput from "@/components/form/form-input";
-import instance from "@/lib/axios-config";
 
 const DashboardPage = () => {
   // States
   const [newNoteDialogOpen, setNewNoteDialogOpen] =
     React.useState<boolean>(false);
+  const [notes, setNotes] = React.useState<Note[]>([]);
 
   // Session
   const { data: session, status } = useSession();
   const auth = session as Auth | null;
 
-  // Notes
-  const notes: Note[] = [
-    {
-      id: "1",
-      title: "Note 1",
-      completed: false,
-    },
+  React.useEffect(() => {
+    if (auth) {
+      getNotes();
+    }
+  }, [auth, newNoteDialogOpen]);
 
-    {
-      id: "2",
-      title: "Note 2",
-      completed: false,
-    },
-    {
-      id: "3",
-      title: "Note 3",
-      completed: false,
-    },
-  ];
+  const getNotes = async () => {
+    try {
+      const { data } = await instance.get("/note", {
+        headers: {
+          token: auth!.jwt as string,
+        },
+      });
+
+      setNotes(data);
+      console.log(data);
+    } catch (error: any) {
+      if (error.response && error.response.status === 401) {
+        signOut();
+      }
+    }
+  };
 
   if (status === "loading") {
     return (
@@ -79,15 +84,20 @@ const DashboardPage = () => {
 
             {/* New note dialog */}
             <NewNoteDialog
+              auth={auth}
               open={newNoteDialogOpen}
               setOpen={setNewNoteDialogOpen}
-              auth={auth}
             />
           </div>
 
           {/* Notes */}
           {notes.map((note) => (
-            <NoteItem note={note} auth={auth} />
+            <NoteItem
+              key={note._id}
+              note={note}
+              auth={auth}
+              setNotes={setNotes}
+            />
           ))}
         </div>
       </div>
@@ -98,17 +108,30 @@ const DashboardPage = () => {
 interface NoteItemProps {
   note: Note;
   auth: Auth | null;
+  setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
 }
 
-const NoteItem: React.FC<NoteItemProps> = ({ note, auth }) => {
+const NoteItem: React.FC<NoteItemProps> = ({ note, auth, setNotes }) => {
+  const [markDoneLoading, setMarkDoneLoading] = React.useState<boolean>(false);
+
   return (
     <>
-      <div
-        key={note.id}
-        className="flex items-center justify-between border w-full px-10 py-5"
-      >
-        <h3 className="font-bold text-lg">{note.title}</h3>
-        <NoteDropdown auth={auth} />
+      <div className="flex items-center justify-between border w-full px-10 py-5">
+        {markDoneLoading ? (
+          <Loader2 className="h-4 m-4 animate-spin" />
+        ) : (
+          <h3
+            className={`font-bold text-lg ${note.completed && "line-through"}`}
+          >
+            {note.title}
+          </h3>
+        )}
+        <NoteDropdown
+          auth={auth}
+          note={note}
+          setMarkDoneLoading={setMarkDoneLoading}
+          setNotes={setNotes}
+        />
       </div>
     </>
   );
@@ -116,10 +139,62 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, auth }) => {
 
 interface NoteDropdownProps {
   auth: Auth | null;
+  note: Note;
+  setNotes: React.Dispatch<React.SetStateAction<Note[]>>;
+  setMarkDoneLoading: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const NoteDropdown: React.FC<NoteDropdownProps> = ({ auth }) => {
+const NoteDropdown: React.FC<NoteDropdownProps> = ({
+  auth,
+  note,
+  setNotes,
+  setMarkDoneLoading,
+}) => {
+  // Variable states
   const [open, setOpen] = React.useState(false);
+
+  const markDone = async () => {
+    setMarkDoneLoading(true);
+    try {
+      await instance.patch(
+        `/note/${note._id}`,
+        {},
+        {
+          headers: {
+            token: auth!.jwt as string,
+          },
+        },
+      );
+
+      setNotes((prev) => {
+        // Create a new note object with the toggled completed status
+        const updatedNote = { ...note, completed: !note.completed };
+
+        // Separate notes into incomplete and completed arrays
+        const incompleteNotes = prev.filter(
+          (n) => n._id !== note._id && !n.completed,
+        );
+        const completedNotes = prev.filter(
+          (n) => n._id !== note._id && n.completed,
+        );
+
+        // If updated note is completed move the updated note to the end of the completed notes array
+        if (updatedNote.completed) {
+          return [...prev.filter((n) => n._id !== note._id), updatedNote];
+        }
+
+        // If updated note is incomplete concat it to the end of the incomplete notes array
+        return [...incompleteNotes, updatedNote, ...completedNotes];
+      });
+    } catch (error: any) {
+      console.error(error);
+      if (error.response && error.response.status === 401) {
+        signOut();
+      }
+    } finally {
+      setMarkDoneLoading(false);
+    }
+  };
 
   return (
     <>
@@ -129,6 +204,8 @@ const NoteDropdown: React.FC<NoteDropdownProps> = ({ auth }) => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem>Edit</DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => markDone()}>Done</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-red-600"
@@ -140,20 +217,42 @@ const NoteDropdown: React.FC<NoteDropdownProps> = ({ auth }) => {
       </DropdownMenu>
 
       {/* Delete note dialog */}
-      <DeleteNoteDialog open={open} setOpen={setOpen} auth={auth} />
+      <DeleteNoteDialog open={open} setOpen={setOpen} auth={auth} note={note} />
     </>
   );
 };
 
 interface DeleteNoteDialogProps {
+  auth: Auth | null;
+  note: Note;
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const DeleteNoteDialog: React.FC<DeleteNoteDialogProps> = ({
+  auth,
+  note,
   open,
   setOpen,
 }) => {
+  // Loading state
+  const [loading, setLoading] = React.useState<boolean>(false);
+
+  const handleDeleteNote = async () => {
+    setLoading(true);
+    try {
+      await instance.delete(`/note/${note._id}`, {
+        headers: {
+          token: auth!.jwt as string,
+        },
+      });
+    } catch (error: any) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={() => setOpen(!open)}>
@@ -166,7 +265,14 @@ const DeleteNoteDialog: React.FC<DeleteNoteDialogProps> = ({
             <Button variant={"secondary"} onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button className="bg-red-600 text-white">Delete</Button>
+            <Button
+              className="bg-red-600 text-white"
+              onClick={handleDeleteNote}
+              disabled={loading}
+            >
+              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -174,13 +280,13 @@ const DeleteNoteDialog: React.FC<DeleteNoteDialogProps> = ({
   );
 };
 
-interface DeleteNoteDialogProps {
+interface NewNoteDialogProps {
   auth: Auth | null;
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const NewNoteDialog: React.FC<DeleteNoteDialogProps> = ({
+const NewNoteDialog: React.FC<NewNoteDialogProps> = ({
   auth,
   open,
   setOpen,
@@ -194,8 +300,11 @@ const NewNoteDialog: React.FC<DeleteNoteDialogProps> = ({
   // Loading state
   const [loading, setLoading] = React.useState<boolean>(false);
 
+  // Custom hooks
+  const { toast } = useToast();
+
   const handleTitle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(title);
+    setTitle(e.target.value);
 
     if (!e.target.value.trim()) {
       setError("Title cannot be empty.");
@@ -218,11 +327,30 @@ const NewNoteDialog: React.FC<DeleteNoteDialogProps> = ({
           },
         },
       );
+
+      clearForm();
+
+      toast({
+        title: "Note created successfully.",
+        className: "bg-green-500 text-white",
+      });
     } catch (error: any) {
       console.error(error);
+      if (error.response && error.response.status === 400) {
+        setError("Title cannot be empty.");
+      }
+
+      if (error.response && error.response.status === 401) {
+        signOut();
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const clearForm = () => {
+    setTitle("");
+    setError("");
   };
 
   return (

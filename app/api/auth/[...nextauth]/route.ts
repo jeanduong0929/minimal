@@ -1,6 +1,6 @@
 import connectDB from "@/lib/db";
-import AccountEntity from "@/entities/account-entity";
-import UserEntity from "@/entities/user-entity";
+import AccountEntity, { AccountDocument } from "@/entities/account-entity";
+import UserEntity, { UserDocument } from "@/entities/user-entity";
 import GithubProvider from "next-auth/providers/github";
 import jwt from "jsonwebtoken";
 import { JWT } from "next-auth/jwt";
@@ -34,7 +34,7 @@ const handler = NextAuth({
 
         if (account.provider === "github") {
           const githubProfile = profile as GithubProfile;
-          providerId = githubProfile?.id;
+          providerId = githubProfile.id;
           providerType = "github";
         } else {
           providerId = account.id;
@@ -45,18 +45,20 @@ const handler = NextAuth({
         await connectDB();
 
         // Find account
-        const existingAccount = await AccountEntity.findOne({ providerId });
+        const existingAccount = await AccountEntity.findOne<AccountDocument>({
+          providerId,
+        });
         if (existingAccount) {
           return true;
         }
 
         // Find user
-        const existingUser = await AccountEntity.findOne({
+        const existingUser = await UserEntity.findOne<UserDocument>({
           email: user?.email,
         });
         if (existingUser) {
           // Create account
-          await AccountEntity.create({
+          await AccountEntity.create<AccountDocument>({
             providerId,
             providerType,
             user: existingUser._id,
@@ -65,10 +67,10 @@ const handler = NextAuth({
         }
 
         // Create user and account
-        const newUser = await UserEntity.create({
+        const newUser = await UserEntity.create<UserDocument>({
           email: user?.email,
         });
-        await AccountEntity.create({
+        await AccountEntity.create<AccountDocument>({
           providerId,
           providerType,
           user: newUser._id,
@@ -91,13 +93,15 @@ const handler = NextAuth({
         await connectDB();
 
         // Find user
-        const existingUser = await UserEntity.findOne({ email: user.email });
+        const existingUser = await UserEntity.findOne<UserDocument>({
+          email: user.email,
+        });
 
         // Create jwt token
         const jwtToken = jwt.sign(
           {
-            id: existingUser._id,
-            email: existingUser.email,
+            _id: existingUser?._id,
+            email: existingUser?.email,
           },
           process.env.JWT_SECRET as string,
           {

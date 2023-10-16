@@ -1,6 +1,6 @@
 import { Session } from "next-auth";
 
 export default interface Auth extends Session {
-  id: string;
+  _id: string;
   jwt: string;
 }

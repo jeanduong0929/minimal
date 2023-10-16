@@ -1,8 +1,9 @@
-import Footer from "@/components/footer";
 import "./globals.css";
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import Footer from "@/components/footer";
 import Session from "@/contexts/session-provider";
+import { Inter } from "next/font/google";
+import { Toaster } from "@/components/ui/toaster";
+import type { Metadata } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,6 +24,7 @@ export default function RootLayout({
           <div className="flex flex-col min-h-screen">
             <main className="flex-grow">{children}</main>
             <Footer />
+            <Toaster />
           </div>
         </Session>
       </body>

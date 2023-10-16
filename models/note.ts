@@ -1,5 +1,5 @@
 export default interface Note {
-  id: string;
+  _id: string;
   title: string;
   completed: boolean;
 }
