@@ -75,9 +75,6 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ session }) => {
           <Link href={"/dashboard"}>
             <DropdownMenuItem>Dashboard</DropdownMenuItem>
           </Link>
-          <Link href={"/profile"}>
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-          </Link>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOut()}>
             Sign out
