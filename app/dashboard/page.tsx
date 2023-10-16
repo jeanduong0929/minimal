@@ -336,7 +336,9 @@ const NewNoteDialog: React.FC<NewNoteDialogProps> = ({
     }
   };
 
-  const handleNewNoteForm = async () => {
+  const handleNewNoteForm = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
     setLoading(true);
     try {
       await instance.post(
