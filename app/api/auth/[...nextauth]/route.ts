@@ -13,6 +13,10 @@ interface GithubProfile extends Profile {
   id: string;
 }
 
+interface CredentialUser extends User {
+  _id: string;
+}
+
 const handler = NextAuth({
   providers: [
     GithubProvider({
@@ -55,6 +59,7 @@ const handler = NextAuth({
       console.log(account, profile);
       let providerId = "";
       let providerType = "";
+      let credentials;
 
       if (account && account.provider === "github") {
         const githubProfile = profile as GithubProfile;
@@ -62,12 +67,16 @@ const handler = NextAuth({
         providerType = "github";
       }
 
+      if (user && !user.id) {
+        credentials = user as CredentialUser;
+      }
+
       // Connect to db
       await connectDB();
 
       // Find account
       const existingAccount = await AccountEntity.findOne<AccountDocument>({
-        providerId,
+        providerId: providerId || credentials?._id,
       });
       if (existingAccount) {
         return true;

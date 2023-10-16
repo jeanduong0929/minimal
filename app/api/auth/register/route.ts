@@ -23,9 +23,15 @@ export const POST = async (req: NextRequest) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    await UserEntity.create<UserDocument>({
+    const newUser = await UserEntity.create<UserDocument>({
       email,
       password: hashedPassword,
+    });
+
+    await AccountEntity.create<AccountDocument>({
+      providerId: newUser._id,
+      providerType: "credentials",
+      user: newUser._id,
     });
 
     return NextResponse.json({}, { status: 201 });
