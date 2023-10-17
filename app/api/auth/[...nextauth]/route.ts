@@ -61,6 +61,10 @@ const handler = NextAuth({
       let providerType = "";
       let credentials;
 
+      if (!user) {
+        return false;
+      }
+
       if (account && account.provider === "github") {
         const githubProfile = profile as GithubProfile;
         providerId = githubProfile.id;

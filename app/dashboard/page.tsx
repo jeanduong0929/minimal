@@ -407,10 +407,13 @@ const NewNoteDialog: React.FC<NewNoteDialogProps> = ({
     <>
       <Dialog open={open} onOpenChange={() => setOpen(!open)}>
         <DialogContent>
-          <form onSubmit={handleNewNoteForm}>
-            <div className="w-full pb-5 pt-10">
+          <DialogHeader>
+            <DialogTitle>Create Note</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleNewNoteForm} className="pt-3">
+            <div className="w-full pb-5">
               <FormInput
-                placeholder={"Example note"}
+                placeholder={"Ex: Work on programming"}
                 type={"text"}
                 value={title}
                 onChange={handleTitle}
