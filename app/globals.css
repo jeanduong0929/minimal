@@ -76,7 +76,11 @@
 }
 
 .fade-in {
-  animation: fadeIn 0.3s ease-in-out;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.slide {
+  animation: slide 0.5s ease-in-out;
 }
 
 @keyframes fadeIn {
@@ -85,5 +89,14 @@
   }
   100% {
     opacity: 1;
+  }
+}
+
+@keyframes slide {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(0);
   }
 }

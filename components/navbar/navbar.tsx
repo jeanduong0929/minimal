@@ -2,7 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import { Session } from "next-auth";
-import { CommandIcon, Moon, Sun } from "lucide-react";
+import { CommandIcon, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { signOut, useSession } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,19 +14,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import Loader from "../loader";
-import { useTheme } from "next-themes";
+
+type SessionStatus = "unauthenticated" | "authenticated" | "loading";
 
 const Navbar = () => {
-  const { data: session, status } = useSession();
-
-  if (status === "loading") {
-    return (
-      <>
-        <Loader />
-      </>
-    );
-  }
+  const {
+    data: session,
+    status,
+  }: { data: Session | null; status: SessionStatus } = useSession();
 
   return (
     <>
@@ -36,8 +31,10 @@ const Navbar = () => {
           <h1 className="text-xl font-bold">Minimal.</h1>
         </Link>
 
-        <div className="flex items-center gap-5">
-          {session ? (
+        <div className="flex items-center gap-5 min-w-[40px] min-h-[40px]">
+          {status === "loading" ? (
+            <Loader2 className="h-6 w-6 animate-spin" />
+          ) : status === "authenticated" ? (
             <UserDropdown session={session} />
           ) : (
             <Link href={"/login"}>

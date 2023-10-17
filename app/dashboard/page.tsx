@@ -126,12 +126,14 @@ const NoteItem: React.FC<NoteItemProps> = ({
 
   return (
     <>
-      <div className="flex items-center justify-between border w-full px-10 py-5">
+      <div className="flex items-center justify-between border w-full px-10 py-5 fade-in slide">
         {markDoneLoading ? (
           <Loader2 className="h-4 m-4 animate-spin" />
         ) : (
           <h3
-            className={`font-bold text-lg ${note.completed && "line-through"}`}
+            className={`font-bold text-lg fade-in ${
+              note.completed && "line-through"
+            }`}
           >
             {note.title}
           </h3>
